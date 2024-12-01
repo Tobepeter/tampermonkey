@@ -22,6 +22,7 @@
   let paginationDiv, preBtn, nextBtn, valid
   let tip
 
+  // -- utils --
   function waitUntil(predict, timeout) {
     return new Promise((resolve, reject) => {
       var timeOutId = -1,
@@ -45,6 +46,25 @@
       intervalId = setInterval(check, 100)
       check()
     })
+  }
+
+  function wait(duration) {
+    return new Promise((resolve) => setTimeout(resolve, duration))
+  }
+
+  function waitIdle() {
+    return new Promise((resolve) => {
+      window.requestIdleCallback(resolve)
+    })
+  }
+
+  function getManualPromise() {
+    let callResolve
+    const p = new Promise((resolve) => {
+      callResolve = resolve
+    })
+    p.callResolve = callResolve
+    return p
   }
 
   async function prepare() {
@@ -79,7 +99,9 @@
     console.log('[tampermonkey] haowallpaper ready')
   }
 
-  // ----- navigation -----
+  /**
+   * 导航
+   */
   function prev() {
     hideTip()
     preBtn.click()
@@ -98,7 +120,11 @@
   }
   addKeyboardEvent()
 
-  // ----- tip -----
+  /**
+   * tip提示
+   * @desc 提供一个tip，提示方向键来切换
+   * @desc 导航后隐藏
+   */
   function hideTip() {
     tip.style.opacity = '0'
   }
@@ -125,7 +151,10 @@
   }
   addTip()
 
-  // ----- small card -----
+  /**
+   * 将卡片设置为小卡片
+   * @desc 卡片太大了，需要滚动，最好一个屏幕内能够看完
+   */
   function smallCard() {
     if (!SMALL_CARD) return
     for (const styleSheet of document.styleSheets) {
@@ -139,4 +168,75 @@
     }
   }
   smallCard()
+
+  /**
+   * 预加载
+   * @desc 示例地址 https://haowallpaper.com/?isSel=true&page=8
+   */
+  const INVALID_PAGE = -999
+  const loadPageRange = 3
+  const loadedPage = new Set()
+  let loadingPagePromise
+
+  async function loadByIframe(page) {
+    const p = getManualPromise()
+    if (loadingPagePromise) {
+      await loadingPagePromise
+    }
+    loadingPagePromise = p
+
+    const currentUrl = new URL(window.location.href)
+    currentUrl.searchParams.set('page', page)
+    const nextPageUrl = currentUrl.toString()
+
+    // 创建一个隐藏的iframe来加载下一页
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+
+    // 监听iframe加载完成
+    iframe.onload = function () {
+      console.log(`预加载完成: ${nextPageUrl}`)
+      p.callResolve()
+      // 加载完成后移除iframe
+      setTimeout(() => {
+        document.body.removeChild(iframe)
+      }, 1000)
+    }
+
+    iframe.onerror = function () {
+      console.error(`预加载失败: ${nextPageUrl}`)
+      p.callResolve()
+    }
+
+    iframe.src = nextPageUrl
+
+    document.body.appendChild(iframe)
+  }
+
+  function getCurrentPage() {
+    const searchParams = new URLSearchParams(window.location.search)
+    const page = Number(searchParams.get('page'))
+    return isNaN(page) ? INVALID_PAGE : page
+  }
+
+  async function loadPageInRange() {
+    // NOTE: 暂时关闭了
+    // 1. 使用iframe太多会很卡，还要考虑释放问题
+    // 2. 每个iframe还会额外执行一次tampermonkey脚本，会无限加载，非常卡
+    return
+
+    await waitIdle()
+    const currentPage = getCurrentPage()
+    loadedPage.add(currentPage)
+    if (currentPage === INVALID_PAGE) return
+    for (let i = -loadPageRange; i < loadPageRange; i++) {
+      const page = currentPage + i
+      if (page < 1) continue
+      if (loadedPage.has(page)) continue
+      loadedPage.add(page)
+      loadByIframe(page)
+    }
+  }
+
+  loadPageInRange()
 })()
