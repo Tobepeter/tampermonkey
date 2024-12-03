@@ -52,8 +52,74 @@
     }
   }
 
+  class Tip {
+    tip = null
+    hideTipTimerId = -1
+    tipPulseTimerId = -1
+
+    init() {
+      this.tip = document.createElement('div')
+      document.body.appendChild(this.tip)
+      this.tip.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 5px;
+        border-radius: 5px;
+        z-index: 999;
+        font-size: 30px;
+        border: 1px solid white;
+        opacity: 0;
+      `
+      this.tip.textContent = '提示'
+    }
+
+    hide() {
+      this.tip.style.opacity = 0
+    }
+
+    show(msg, { autoHide = true, pulse = true } = {}) {
+      this.tip.textContent = msg
+      this.tip.style.opacity = 1
+
+      clearTimeout(this.hideTipTimerId)
+      if (autoHide) {
+        this.hideTipTimerId = setTimeout(() => {
+          this.tip.style.opacity = 0
+        }, 3000)
+      }
+
+      if (pulse) {
+        this.pulse()
+      }
+    }
+
+    pulse() {
+      let scale = 1
+      let growing = true
+      const scaleStep = 0.05
+      const finalScale = 1.3
+      clearInterval(this.tipPulseTimerId)
+      this.tipPulseTimerId = setInterval(() => {
+        if (growing) {
+          scale += scaleStep
+          if (scale >= finalScale) growing = false
+        } else {
+          scale -= scaleStep
+          if (scale <= 1) {
+            clearInterval(this.tipPulseTimerId)
+          }
+        }
+        this.tip.style.transform = `scale(${scale})`
+      }, 16)
+    }
+  }
+
+
   let inputboxBtn, valid, inputboxATag
-  let tip
+  const tip = new Tip()
 
   async function preCheck() {
     inputboxBtn = await waitUntil(() => document.querySelector('div[data-tooltip="收件箱"]'))
@@ -82,12 +148,8 @@
     console.log('[tampermonkey] gmail-CAPTCHA preCheck success')
   }
 
-  function isSelectInputbox() {
-    return inputboxATag.tabIndex !== -1
-  }
-
   async function gotoInbox() {
-    if (isSelectInputbox()) return true
+    if (isEntryInbox()) return true
     inputboxBtn.click()
     return await waitUntil(() => isEntryInbox())
   }
@@ -102,25 +164,24 @@
   }
 
   async function clickFirstEmail() {
-    if (!isSelectInputbox()) return false
-
-    // 有多个table中，找到收件列表的那个
-    const tables = document.querySelectorAll('table')
-    let findTable = null
-    for (const table of tables) {
-      const trs = table.querySelectorAll('tr')
-      if (trs.length === 0) continue
-      const td = trs[0].querySelector('td[data-tooltip="选择"]')
-      if (td) {
-        findTable = table
-        break
-      }
-    }
-
-    if (!findTable) return
+    if (!isEntryInbox()) return false
 
     // 找到第一个item
     function waitClickUnread() {
+      // 有多个table中，找到收件列表的那个
+      const tables = document.querySelectorAll('table')
+      let findTable = null
+      for (const table of tables) {
+        const trs = table.querySelectorAll('tr')
+        if (trs.length === 0) continue
+        const td = trs[0].querySelector('td[data-tooltip="选择"]')
+        if (td) {
+          findTable = table
+          break
+        }
+      }
+      if (!findTable) return false
+
       const trs = findTable.querySelectorAll('tr')
       if (trs.length === 0) return false
 
@@ -141,8 +202,7 @@
       return true
     }
 
-    showTip()
-    tip.textContent = '等待未读邮件'
+    tip.show('等待未读邮件', { autoHide: false })
 
     // show ...
     let dotCount = 0
@@ -151,11 +211,10 @@
     const dotTimerId = setInterval(() => {
       dotCount++
       if (dotCount > dotMax) dotCount = 0
-      tip.textContent = '等待未读邮件' + '.'.repeat(dotCount)
+      tip.tip.textContent = '等待未读邮件' + '.'.repeat(dotCount)
     }, dotInterval)
-    showTip()
 
-    const waitTime = 10 * 1000
+    const waitTime = 20 * 1000
     const clickFirstEmailSuccess = await waitUntil(() => waitClickUnread(), waitTime)
 
     clearInterval(dotTimerId)
@@ -165,7 +224,7 @@
       log(`未找到未读邮件，等待时间：${waitTime}ms`)
       return false
     }
-    hideTip()
+    tip.hide()
 
     return await waitUntil(() => isReadingMail())
   }
@@ -191,17 +250,17 @@
   function addKeyboardListener() {
     document.addEventListener('keydown', async (event) => {
       if (event.key === 't') {
-        hideTip()
+        tip.hide()
         const inboxSuccess = await gotoInbox()
         if (!inboxSuccess) {
-          log('进入收件箱失败')
+          tip.show('进入收件箱失败')
           return
         }
 
         if (!isReadingMail()) {
           const firstEmailSuccess = await clickFirstEmail()
           if (!firstEmailSuccess) {
-            log('点击第一封邮件失败')
+            tip.show('点击第一封邮件失败')
             return
           }
         }
@@ -209,9 +268,9 @@
         const captcha = getCaptcha()
         if (captcha) {
           GM_setClipboard(captcha)
-          log('复制成功')
+          tip.show('复制成功')
         } else {
-          log('未找到验证码')
+          tip.show('未找到验证码')
         }
       }
     })
@@ -219,60 +278,11 @@
 
   addKeyboardListener()
 
-  function addTip() {
-    tip = document.createElement('div')
-    document.body.appendChild(tip)
-
-    // use style text
-    tip.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background-color: rgba(0, 0, 0, 0.5);
-        color: white;
-        padding: 5px;
-        border-radius: 5px;
-        z-index: 999;
-        font-size: 30px;
-        border: 1px solid white;
-        transition: opacity 0.3s;
-      `
-    tip.textContent = '按T执行自动化'
+  function initTip() {
+    tip.init()
+    tip.show('按T执行自动化', { pulse: false })
   }
 
-  function hideTip() {
-    tip.style.opacity = 0
-  }
-
-  function showTip() {
-    tip.style.opacity = 1
-  }
-
-  addTip()
-
-  let tipTimerId = -1
-
-  function pulseTip(msg) {
-    let scale = 1
-    let growing = true
-
-    tip.textContent = msg
-
-    clearInterval(tipTimerId)
-    tipTimerId = setInterval(() => {
-      if (growing) {
-        scale += 0.03
-        if (scale >= 1.2) growing = false
-      } else {
-        scale -= 0.02
-        if (scale <= 1) {
-          // growing = true
-          clearInterval(tipTimerId)
-        }
-      }
-
-      tip.style.transform = `scale(${scale})`
-    }, 16)
-  }
+  initTip()
 
 })()
