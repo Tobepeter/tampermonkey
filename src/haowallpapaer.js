@@ -9,9 +9,10 @@
 // @icon         https://haowallpaper.com/favicon.ico
 // @grant        none
 // @run-at       document-end
+// @icon         https://haowallpaper.com/favicon.ico
 // ==/UserScript==
 
-;(async function () {
+; (async function () {
   'use strict'
 
   // -- config --
@@ -33,15 +34,16 @@
       }
 
       function check() {
-        if (predict()) {
+        const result = predict()
+        if (result) {
           clear()
-          resolve()
+          resolve(result)
         }
       }
 
       timeOutId = setTimeout(() => {
         clear()
-        resolve()
+        resolve(null)
       }, timeout)
       intervalId = setInterval(check, 100)
       check()
@@ -68,10 +70,7 @@
   }
 
   async function prepare() {
-    await waitUntil(() => {
-      paginationDiv = document.querySelector('#pagination')
-      return paginationDiv
-    }, FIND_DOM_TIMEOUT)
+    const paginationDiv = await waitUntil(() => document.querySelector('#pagination'), FIND_DOM_TIMEOUT)
     if (!paginationDiv) {
       valid = false
       return
@@ -239,4 +238,22 @@
   }
 
   loadPageInRange()
+
+  function disableCardAni() {
+
+    // 轮询去掉 animation-duration
+    function removeAni() {
+      const cards = document.querySelectorAll('.TheHomeBody .card');
+      if (!cards) return;
+      for (let card of cards) {
+        // card.style.animationDuration = '0s';
+        card.style.animationDuration = '0.05s';
+      }
+    }
+
+    setInterval(removeAni, 50);
+  }
+
+  // NOTE: 其实图片有一个加载过程，关掉了体验不是很好
+  // disableCardAni();
 })()
