@@ -159,7 +159,10 @@
     return window.location.hash.includes('#inbox/')
   }
 
+  /** 是否在收件箱列表页 */
   function isEntryInbox() {
+    // 阅读新建需要回到收件箱列表，才能点击到最新的邮件
+    if (isReadingMail()) return false
     return window.location.hash.includes('#inbox')
   }
 
