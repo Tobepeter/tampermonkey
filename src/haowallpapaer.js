@@ -3,7 +3,7 @@
 // @name:zh-CN   哲风壁纸优化
 // @namespace    tobe
 // @version      0.0.1
-// @description  一键下载好壁纸网站的图片
+// @description  优化好壁纸网站的交互
 // @author       Tobe
 // @match        https://haowallpaper.com/*
 // @icon         https://haowallpaper.com/favicon.ico
