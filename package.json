@@ -1,0 +1,30 @@
+{
+  "name": "tampermonkey",
+  "version": "1.0.0",
+  "description": "tampermonkey 个人用的一些脚本",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build:bookmark": "node scripts/build-bookmark.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tobepeter/tampermonkey.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Tobepeter/tampermonkey/issues"
+  },
+  "homepage": "https://github.com/Tobepeter/tampermonkey#readme",
+  "dependencies": {
+    "art-template": "^4.13.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "commander": "^13.1.0",
+    "dirname-filename-esm": "^1.1.2",
+    "dotenv": "^16.5.0"
+  }
+}
