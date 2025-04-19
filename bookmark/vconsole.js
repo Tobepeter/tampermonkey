@@ -1,4 +1,4 @@
-function addVConsole() {
+;(function () {
   const script = document.createElement('script')
   script.src = 'https://cdn.jsdelivr.net/npm/vconsole@3.9.0/dist/vconsole.min.js'
 
@@ -6,5 +6,4 @@ function addVConsole() {
     new VConsole()
   }
   document.head.appendChild(script)
-}
-addVConsole()
+})()
