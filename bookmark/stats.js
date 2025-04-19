@@ -3,8 +3,17 @@
   script.onload = function () {
     // @ts-ignore
     var stats = new Stats()
-    document.body.appendChild(stats.dom)
-    document.body.appendChild(stats.dom)
+    var dom = stats.dom
+    document.body.appendChild(dom)
+
+    function posStat() {
+      var style = dom.style
+      style.left = 'unset'
+      style.right = '20px'
+      style.top = '20px'
+    }
+
+    posStat()
 
     requestAnimationFrame(function loop() {
       stats.update()

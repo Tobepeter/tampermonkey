@@ -64,6 +64,7 @@ function main() {
   const baseUrl = prevMap.raw + '/' + path.join(GIT_REPO, branch)
 
   setNoEscape()
+  // TODO: 看看是否支持inline模式？
 
   let verboseStr = ''
   for (const jsFile of jsFiles) {
